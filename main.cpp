@@ -2,10 +2,12 @@
 #include <unistd.h>
 #include <curses.h>
 
-#define MAP_W 100
+#define MAP_W 200
 #define MAP_H 100
 #define SCREEN_H 50
-#define SCREEN_W 50
+#define SCREEN_W 100
+#define LASER_RANGE 10
+
 
 typedef struct s_point {
 	int x;
@@ -25,61 +27,16 @@ typedef struct s_player {
 	t_direction cur_direction;
 } t_player;
 
-/*
-class Player {
-public:
-	int	hp;
-	Point pos;
-	e_direction dir;
-
-	Player(int y, int x): hp(3), pos(y, x), dir(EAST) {}
-	~Player() {}
-
-	static Point dir_to_delta(e_direction dir)
-	{
-		if (dir == NORTH)
-			return Point(-1, 0);
-		else if (dir == SOUTH)
-			return Point(+1, 0);
-		else if (dir == EAST)
-			return Point(0, +1);
-		else if (dir == WEST)
-			return Point(0, -1);
-		return Point(0, 0);
-	}
-
-	void	slide(int dy, int dx)
-	{
-		if (0 + SCREEN_W/2 < pos.x + dx && pos.x + dx < MAP_W - SCREEN_W/2)
-			pos.x += dx;
-		if (0 + SCREEN_H/2 < pos.y + dy && pos.y + dy < MAP_H - SCREEN_H/2)
-			pos.y += dy;
-	}
-	void	rotate(e_direction newdir)
-	{
-		dir = newdir;
-	}
-	void	move(e_direction dir)
-	{
-		Point delta = dir_to_delta(dir);
-		slide(delta.y, delta.x);
-		rotate(dir);
-	}
-	int	dirx() const
-	{
-		return dir_to_delta(dir).x;
-	}
-	int	diry() const
-	{
-		return dir_to_delta(dir).y;
-	}
-};
-*/
-
 void	init_ncurses() {
 	initscr();
 	noecho();
+	curs_set(0);
+	cbreak();
 	timeout(42);
+	start_color();
+	// text, background
+	init_pair(1, COLOR_RED, COLOR_RED);
+	init_pair(2, COLOR_BLUE, COLOR_BLUE);
 }
 
 t_point get_next_step(t_player p) {
@@ -110,17 +67,47 @@ t_point get_next_step(t_player p) {
 	return point;
 }
 
-void move(t_player *p) {
+void blink_red() {
+	// Set all positions to red
+	for (int y = 0; y < SCREEN_H; y++) {
+	    for (int x = 0; x < SCREEN_W; x++) {
+	        mvaddch(y, x, ' ' | COLOR_PAIR(1));
+	    }
+	}
+	refresh();
+	usleep(200000);
+}
+
+void blink_blue() {
+	// Set all positions to red
+	for (int y = 0; y < SCREEN_H; y++) {
+	    for (int x = 0; x < SCREEN_W; x++) {
+	        mvaddch(y, x, ' ' | COLOR_PAIR(2));
+	    }
+	}
+	refresh();
+	usleep(200000);
+}
+
+
+void move(t_player *p, char map[MAP_H][MAP_W]) {
 	t_point delta = get_next_step(*p);
 	t_point new_position;
 	new_position = p->cur_position;
-	new_position.x += delta.x;
+	new_position.x += delta.x*2;
 	new_position.y += delta.y;
-	if (new_position.x < MAP_W && new_position.x > 0) {
+
+	if (new_position.x < MAP_W - SCREEN_W/2 && new_position.x > SCREEN_W/2) {
 		p->cur_position.x = new_position.x;
 	}
-	if (new_position.y < MAP_H && new_position.y > 0) {
+	if (new_position.y < MAP_H - SCREEN_H/2 && new_position.y > SCREEN_H/2) {
 		p->cur_position.y = new_position.y;
+	}
+
+	if (map[p->cur_position.y][p->cur_position.x] == 'E'
+			|| map[p->cur_position.y][p->cur_position.x - delta.x]) {
+		p->health--;
+		blink_red();
 	}
 }
 
@@ -129,6 +116,7 @@ void draw_screen(t_player player, char map[MAP_H][MAP_W]) {
 	// damage when meet enemy
 	// TODO: blink screen in red
 	//if (map[player.cur_position.y][player.cur_position.x]) {
+	//#define LASER_RANGE (SCREEN_W/3)
 		//player.health -= 1;
 	//}
 
@@ -176,22 +164,52 @@ int	main() {
 	player.cur_position.x = MAP_W/2;
 	player.cur_position.y = MAP_H/2;
 	player.cur_direction = EAST;
+
+	// tests
+	///
 	char	map[MAP_H][MAP_W] = {};
 	// enemy count is 120
-	// TODO: put breaks at the edges of map
 	for (int i = 0; i < 120; i++) {
 		map[rand()%MAP_H][rand()%MAP_W] = 'E';
+	}
+
+	// draw side walls
+	for (int y = 0; y < MAP_H; y++){
+		for (int x = 0; x < MAP_W; x++) {
+			if (x < SCREEN_W/2 || x > MAP_W - SCREEN_W/2 
+					|| y < SCREEN_H/2 || y > MAP_H - SCREEN_H/2) {
+				map[y][x] = 'W';
+			}
+		}
 	}
 
 	for (; player.health > 0;) {
 		int	ch = getch();
 		clear();
 		printw("hp=%d, ch=%c, pos [x:%d, y:%d]", player.health, ch, player.cur_position.x, player.cur_position.y);
+		int enemy_crossed_laser = 0;
 		switch (ch) {
 			case ' ':
 				//fire by laser
-				for (int i = 1; i < 20; i++) {
-					//mvprintw(SCREEN_H/2+player.diry()*i, SCREEN_W/2+player.dirx()*i*2, "+");
+				for (int i = 0; i < LASER_RANGE; i++) {
+					t_point dir_pnt = get_next_step(player);
+					mvprintw(SCREEN_H/2+dir_pnt.y*i, SCREEN_W/2+dir_pnt.x*i*2, "+");
+					int y = player.cur_position.y + dir_pnt.y*i;
+					int x1 = player.cur_position.x + dir_pnt.x*i;
+					int x2 = player.cur_position.x + dir_pnt.x*i*2;
+					if (map[y][x1] == 'E') {
+						map[y][x1] = ' ';
+						enemy_crossed_laser = 1;
+						break;
+					}
+					if (map[y][x2] == 'E') {
+						map[y][x2] = ' ';
+						enemy_crossed_laser = 1;
+						break;
+					}
+				}
+				if (enemy_crossed_laser == 1) {
+					blink_blue();
 				}
 				break;
 			case 'a':
@@ -211,10 +229,20 @@ int	main() {
 				endwin();
 				return 0;
 		}
-		move(&player);
+		move(&player, map);
 		draw_screen(player, map);
+		mvprintw(0, 0, "hp=%d, ch=%c, pos [x:%d, y:%d]", player.health, ch, player.cur_position.x, player.cur_position.y);
 	}
-	// player dead
-	// draw dead msg
+	clear();
+	mvprintw(SCREEN_H/2, SCREEN_W/2, "Game over");
+	timeout(100500);
+	getch();
+	endwin();
 	return 0;
 }
+
+/*
+ * BUGS, TODO
+ * when shooted do blink with red and some ascii art (some word)
+ * blinking coursour on other non iterm terms: try other terminal
+ */
