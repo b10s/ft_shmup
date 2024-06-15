@@ -21,7 +21,7 @@ typedef enum e_direction {
 	WEST = 3,
 } t_direction;
 
-typedef struct s_player {
+typedef struct {
 	int health;
 	t_point cur_position;
 	t_direction cur_direction;
@@ -90,7 +90,7 @@ void blink_blue() {
 }
 
 
-void move(t_player *p, char map[MAP_H][MAP_W]) {
+void move_player(t_player *p, char map[MAP_H][MAP_W]) {
 	t_point delta = get_next_step(*p);
 	t_point new_position;
 	new_position = p->cur_position;
@@ -229,7 +229,7 @@ int	main() {
 				endwin();
 				return 0;
 		}
-		move(&player, map);
+		move_player(&player, map);
 		draw_screen(player, map);
 		mvprintw(0, 0, "hp=%d, ch=%c, pos [x:%d, y:%d]", player.health, ch, player.cur_position.x, player.cur_position.y);
 	}
