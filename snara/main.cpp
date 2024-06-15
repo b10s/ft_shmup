@@ -1,5 +1,6 @@
 #include <cstdio>
 #include <curses.h>
+#include <stdexcept>
 #include <vector>
 
 #define MAP_W 100
@@ -72,6 +73,18 @@ public:
 class Entity {
 };
 
+class Gamemap {
+	typedef char value_type;
+	value_type arr[MAP_H][MAP_W];
+public:
+	value_type& at(int y, int x)
+	{
+		if (0 <= y && y < MAP_H && 0 <= x && x < MAP_W)
+			return arr[y][x];
+		throw std::out_of_range("out of range");
+	}
+};
+
 void	init()
 {
 	initscr();
@@ -114,7 +127,7 @@ int	main()
 			player.hp -= 1;
 		for (int y = 0; y < SCREEN_H; y++) {
 			for (int x = 0; x < SCREEN_W; x++) {
-				mvprintw(y, x*2, "%c", OR(map[y+player.pos.y-SCREEN_H/2][x+player.pos.x-SCREEN_W/2], ' '));
+				mvprintw(y, x*2, "%c", OR(map[y+player.pos.y - SCREEN_H/2][x+player.pos.x - SCREEN_W/2], ' '));
 			}
 		}
 		mvprintw(SCREEN_H/2, SCREEN_W/2, "o");
