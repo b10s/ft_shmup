@@ -10,8 +10,9 @@
 struct	Point {
 	int x;
 	int y;
-	Point(int y, int x): y(y), x(x) {}
+	Point(int y, int x): x(x), y(y) {}
 };
+
 enum e_direction {
 	NORTH = 0,
 	EAST = 1,
@@ -19,28 +20,27 @@ enum e_direction {
 	WEST = 3,
 };
 
-Point dir_to_delta(e_direction dir)
-{
-	if (dir == NORTH)
-		return Point(-1, 0);
-	else if (dir == SOUTH)
-		return Point(+1, 0);
-	else if (dir == EAST)
-		return Point(0, +1);
-	else if (dir == WEST)
-		return Point(0, -1);
-	return Point(0, 0);
-}
-
 class Player {
 public:
 	int	hp;
 	Point pos;
 	e_direction dir;
 
-	Player(int y, int x): hp(3), pos(y, x), dir(EAST) {
-	}
+	Player(int y, int x): hp(3), pos(y, x), dir(EAST) {}
 	~Player() {}
+
+	static Point dir_to_delta(e_direction dir)
+	{
+		if (dir == NORTH)
+			return Point(-1, 0);
+		else if (dir == SOUTH)
+			return Point(+1, 0);
+		else if (dir == EAST)
+			return Point(0, +1);
+		else if (dir == WEST)
+			return Point(0, -1);
+		return Point(0, 0);
+	}
 
 	void	slide(int dy, int dx)
 	{
@@ -79,16 +79,18 @@ void	init()
 	timeout(42);
 }
 
+#define OR(a, b) (a ? a : b)
+
 int	main()
 {
 	init();
 	Player	player(getmaxy(stdscr)/2, getmaxx(stdscr)/2);
 	char	map[MAP_H][MAP_W] = {};
-	for (int i = 0; i < 20; i++) {
+	for (int i = 0; i < 120; i++) {
 		map[rand()%MAP_H][rand()%MAP_W] = 'E';
 	}
 
-	for (;;) {
+	for (; player.hp > 0;) {
 		int	ch = getch();
 		clear();
 		printw("hp=%d ", player.hp);
@@ -108,9 +110,11 @@ int	main()
 		else
 			player.move(player.dir);
 
+		if (map[player.pos.y][player.pos.x])
+			player.hp -= 1;
 		for (int y = 0; y < SCREEN_H; y++) {
 			for (int x = 0; x < SCREEN_W; x++) {
-				mvprintw(y, x*2, "%c", map[y+player.pos.y-SCREEN_H/2][x+player.pos.x-SCREEN_W/2]);
+				mvprintw(y, x*2, "%c", OR(map[y+player.pos.y-SCREEN_H/2][x+player.pos.x-SCREEN_W/2], ' '));
 			}
 		}
 		mvprintw(SCREEN_H/2, SCREEN_W/2, "o");
