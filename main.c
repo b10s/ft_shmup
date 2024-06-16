@@ -7,6 +7,18 @@
 
 #include "./ft_shmup.h"
 
+void game_over() {
+	clear();
+	mvprintw(SCREEN_H/2, SCREEN_W/2, "Game over, press q");
+	timeout(100500);
+	while(1) {
+		char ch = getch();
+		if (ch == 'q') {
+			break;
+		}
+	}
+	endwin();
+}
 void	init_ncurses() {
 	initscr();
 	noecho();
@@ -109,15 +121,19 @@ void blink_red() {
   // Draw the big text with color
   draw_big_text(stdscr, big_text, SCREEN_H/2, SCREEN_W/2, 1);  // Using color pair 1 (red)
 
+	if (p.health == 0) {
+		game_over();
+		return;
+	}
 	mvprintw(10, 10, "You have [%d] health points.", p.health);
-	mvprintw(12, 10, "Press C to continue or P to panic.");
+	mvprintw(12, 10, "Press C to continue or Q to panic.");
 	refresh();
 	while(1) {
 		char ch = getch();
 		if (ch == 'c' || ch == 'C') {
 			break;
 		}
-		if (ch == 'p' || ch == 'P') {
+		if (ch == 'q' || ch == 'Q') {
 			endwin();
 			exit(1);
 		}
@@ -283,6 +299,30 @@ void slide(t_direction direction) {
 	}
 }
 
+void kill_enemy(int en_x, int en_y) {
+	char en = map[en_y][en_x];
+	for (int y = en_y - 2; y <= en_y+2; y++) {
+		for (int x = en_x - 2; x <= en_x+2; x++) {
+			if (map[y][x] == en) {
+				map[y][x] = '8';
+			}
+		}
+	}
+}
+
+void put_big_enemy(int x, int y, char e) {
+	map[y][x] = e;
+	map[y][x-1] = e;
+	map[y][x+1] = e;
+	map[y-1][x] = e;
+	map[y-1][x-1] = e;
+	map[y-1][x+1] = e;
+	map[y+1][x] = e;
+	map[y+1][x-1] = e;
+	map[y+1][x+1] = e;
+}
+
+
 // controls //
 // awds - to rotate
 // hjkl - to slide
@@ -304,13 +344,21 @@ int	main() {
 	p.dir = EAST;
 	p.frame = 0;
 
-	// tests
-	///
-	// enemy count is 120
-	for (int i = 0; i < 120; i++) {
-		map[rand()%MAP_H][rand()%MAP_W] = 'L';
+	int x, y;
+	for (int i = 0; i < LASER_CNT; i++) {
+		y = rand() % MAP_H;
+		x = rand() % MAP_W;
+
+		// big enemy has born, ughrr
+		if (x > 5 && y > 5 && x < MAP_W - 5 && y < MAP_H - 5 ) {
+			put_big_enemy(x, y, 'L');
+		} else {
+			//small enemy
+			map[y][x] = 'L';
+		}
+
 	}
-	for (int i = 0; i < 120; i++) {
+	for (int i = 0; i < ENEMY_CNT; i++) {
 		map[rand()%MAP_H][rand()%MAP_W] = 'E';
 	}
 
@@ -352,12 +400,14 @@ int	main() {
 					char step1 = map[p.pos.y + delta.y * i][p.pos.x + delta.x*i];
 					char step2 = map[p.pos.y + delta.y * i][p.pos.x + delta.x*i*2];
 					if (step1 != 0 && strchr(enemy_list, step1) != NULL) {
-						map[p.pos.y + delta.y*i][p.pos.x + delta.x*i] = '8';
+						kill_enemy(p.pos.x + delta.x*i, p.pos.y + delta.y*i);
+						//map[p.pos.y + delta.y*i][p.pos.x + delta.x*i] = '8';
 						enemy_killed = 1;
 						break;
 					}
 					if (step2 != 0 && strchr(enemy_list, step2) != NULL) {
-						map[p.pos.y + delta.y*i][p.pos.x +delta.x*i*2] = '8';
+						kill_enemy(p.pos.x +delta.x*i*2, p.pos.y + delta.y*i);
+						//map[p.pos.y + delta.y*i][p.pos.x +delta.x*i*2] = '8';
 						enemy_killed = 1;
 						break;
 					}
@@ -399,21 +449,12 @@ int	main() {
 		draw_screen();
 		mvprintw(0, 0, "hp=%d, ch=%c, pos [x:%d, y:%d], time lapsed [%ld]", p.health, ch, p.pos.x, p.pos.y, time_taken);
 	}
-	clear();
-	mvprintw(SCREEN_H/2, SCREEN_W/2, "Game over, press q");
-	timeout(100500);
-	while(1) {
-		char ch = getch();
-		if (ch == 'q') {
-			break;
-		}
-	}
-	endwin();
+	game_over();
 	return 0;
 }
 
 /*
- * BUGS, TODO
+ * TODO
  * when shooted do blink with red and some ascii art (some word)
  * blinking coursour on other non iterm terms: try other terminal
  * make enemies bigger: 5x5 characters or so
@@ -421,4 +462,7 @@ int	main() {
  * make player also bigger (so it will support multiplayer in future easier)?
  * make sure it compiles with all flags
  * show usage help before start and ask to press s
+ * make sure when we slide we also can hit the enemy
+ * make big laser to shoot only one laser from middle
+ * when kill laser kill adjustent
  */
