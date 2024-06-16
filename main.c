@@ -13,20 +13,19 @@ void	init_ncurses() {
 	cbreak();
 	timeout(42);
 	start_color();
-	// text, background
+	// color of text, color of background
 	init_pair(1, COLOR_RED, COLOR_RED);
 	init_pair(2, COLOR_BLUE, COLOR_BLUE);
 }
 
 char	map[MAP_H][MAP_W] = {};
-int	enemies[MAP_H][MAP_W] = {};
+int	enemy_state[MAP_H][MAP_W] = {};
 long time_taken;
 
 clock_t start;
 t_player p;
 
-// TODO: make better name
-t_point get_next_step() {
+t_point get_next_point() {
 	t_point point;
 	int dx, dy;
 	dx = 0;
@@ -78,7 +77,7 @@ void blink_blue() {
 
 
 void move_player() {
-	t_point delta = get_next_step();
+	t_point delta = get_next_point();
 	t_point new_position;
 	new_position = p.pos;
 	new_position.x += delta.x*2;
@@ -98,79 +97,82 @@ void move_player() {
 	}
 }
 
-// a,d,w,s + ' ' 
-// ijlk
-
-void draw_enimy_laser(t_point enemy_pos, int x, int y) {
-	int start_x = p.pos.x - SCREEN_W/2;
-	int start_y = p.pos.y - SCREEN_H/2;
-	// fire by laser
+// laser is hotter from right side
+// it is because of solar wind blows from left to the right :)
+void fire_laser(t_point abs_enemy_pos, t_point rel_enemy_pos) {
+	// fire by laser: up and down
 	for (int i = 1; i < LASER_RANGE; i++) {
-		if (map[start_y + y + i][start_x + x] != 'W' && y + i < SCREEN_H) {
-			if ((p.pos.x == enemy_pos.x
-					&& p.pos.y == enemy_pos.y + i)
-					|| (p.pos.x-1 == enemy_pos.x
-					&& p.pos.y == enemy_pos.y + i)) {
+		// not a wall, not out of screen
+		if (map[abs_enemy_pos.y + i][abs_enemy_pos.x] != 'W' && rel_enemy_pos.y + i < SCREEN_H) {
+			if ((p.pos.x == abs_enemy_pos.x
+					&& p.pos.y == abs_enemy_pos.y + i)
+					|| (p.pos.x-1 == abs_enemy_pos.x
+					&& p.pos.y == abs_enemy_pos.y + i)) {
 				p.health--;
 				blink_red();
 			}
-			mvprintw(y+i, x, "+");
+			mvprintw(rel_enemy_pos.y+i, rel_enemy_pos.x, "+");
 		}
-		if (map[start_y + y - i][start_x + x] != 'W') {
-			if ((p.pos.x == enemy_pos.x
-					&& p.pos.y == enemy_pos.y - i)
-					|| (p.pos.x - 1 == enemy_pos.x
-					&& p.pos.y == enemy_pos.y - i)) {
+		//not a wall, screen at the top, negaitive is ok?
+		if (map[abs_enemy_pos.y - i][abs_enemy_pos.x] != 'W') {
+			if ((p.pos.x == abs_enemy_pos.x
+					&& p.pos.y == abs_enemy_pos.y - i)
+					|| (p.pos.x - 1 == abs_enemy_pos.x
+					&& p.pos.y == abs_enemy_pos.y - i)) {
 				p.health--;
 				blink_red();
 			}
-			mvprintw(y-i, x, "+");
+			mvprintw(rel_enemy_pos.y-i, rel_enemy_pos.x, "+");
 		}
 	}
 }
 
 void draw_screen() {
-
-	// TODO: slide - move with space: fire and move without changing the direction
 	// draw current screen
 	// draw player at the center and his direction
-	
-	int start_x = p.pos.x - SCREEN_W/2;
-	int start_y = p.pos.y - SCREEN_H/2;
-	if ( start_x < 0 ) {
-		start_x = 0;
+	t_point scr_origin;
+	scr_origin.x = p.pos.x - SCREEN_W/2;
+	scr_origin.y = p.pos.y - SCREEN_H/2;
+
+	if ( scr_origin.x < 0 ) {
+		scr_origin.x = 0;
 	}
-	if (start_y < 0) {
-		start_y = 0;
+	if (scr_origin.y < 0) {
+		scr_origin.y = 0;
 	}
 
 	char c;
 	for (int y = 0; y < SCREEN_H; y++) {
 		for (int x = 0; x < SCREEN_W; x++) {
 			// draw enemies, walls, and everything
-			mvprintw(y, x, "%c", map[start_y + y][start_x + x]);
-			c = map[start_y + y][start_x + x];
-			// decide randomly shoot or not shoot
-			// TODO: if eneymy type is S
-			if (c == 'E') {
-				t_point enemy_pos;
-				enemy_pos.x = start_x + x;
-				enemy_pos.y = start_y + y;
-				// TODO: maybe we need real time clock and make decicion once a second
-				// ENEMY SHOOTED
-				// start counting 1 second to keep laser on
-				// start counting 3 seconds to make sure enemy is not shooting (recharging)
-				//if (player.frame % 100 < 25) {
-				if (enemies[enemy_pos.y][enemy_pos.x] == 0) {
+			mvprintw(y, x, "%c", map[scr_origin.y + y][scr_origin.x + x]);
+
+			c = map[scr_origin.y + y][scr_origin.x + x];
+			// enemy type is Laser
+			if (c == 'L') {
+				t_point abs_enemy_pos;
+				abs_enemy_pos.x = scr_origin.x + x;
+				abs_enemy_pos.y = scr_origin.y + y;
+				t_point rel_enemy_pos;
+				rel_enemy_pos.x = x;
+				rel_enemy_pos.y = y;
+				int state = enemy_state[abs_enemy_pos.y][abs_enemy_pos.x];
+				if (state == 0) {
+					// decide randomly shoot or not shoot
 					if (rand() % 5 == 1) {
-						enemies[enemy_pos.y][enemy_pos.x] = time_taken;
+						// ENEMY SHOOTED
+						// start counting 1 second to keep laser on
+						// start counting 3 seconds to make sure enemy is not shooting (recharging)
+						enemy_state[abs_enemy_pos.y][abs_enemy_pos.x] = time_taken;
 					} 
-				} else if (enemies[enemy_pos.y][enemy_pos.x] > 0) {
-					draw_enimy_laser(enemy_pos, x, y);
-				} else if (enemies[enemy_pos.y][enemy_pos.x] < 0) {
-					//recharging, need to wait 2-3 seconds
-					if (time_taken - (-1 * enemies[enemy_pos.y][enemy_pos.x]) > 1) {
-						enemies[enemy_pos.y][enemy_pos.x] = 0;
+				// Laser is in switched on state, time is stored in seconds
+				} else if (state > 0) {
+					fire_laser(abs_enemy_pos, rel_enemy_pos);
+				// Laser is in cool down/recharging state, time is stored in seconds (negative)
+				} else if (state < 0) {
+					//recharging, need to wait 1+ seconds
+					if (time_taken - (-1 * state) > 1) {
+						enemy_state[abs_enemy_pos.y][abs_enemy_pos.x] = 0;
 					}
 				}
 			}
@@ -179,7 +181,7 @@ void draw_screen() {
 
 	// draw player
 	mvprintw(SCREEN_H/2, SCREEN_W/2, "o");
-	t_point delta = get_next_step();
+	t_point delta = get_next_point();
 	mvprintw(SCREEN_H/2+delta.y, SCREEN_W/2+delta.x, "%c", "^>v<"[p.dir]);
 	
 	// draw borders
@@ -217,7 +219,12 @@ void slide(t_direction direction) {
 	}
 }
 
-
+// controls //
+// awds - to rotate
+// hjkl - to slide
+// space - to shoot
+// q - to quit
+// //
 int	main() {
 	init_ncurses();
 
@@ -237,11 +244,11 @@ int	main() {
 	///
 	// enemy count is 120
 	for (int i = 0; i < 120; i++) {
+		map[rand()%MAP_H][rand()%MAP_W] = 'L';
+	}
+	for (int i = 0; i < 120; i++) {
 		map[rand()%MAP_H][rand()%MAP_W] = 'E';
 	}
-	map[26][52] = 'E';
-	map[36][52] = 'E';
-	map[46][52] = 'E';
 
 	// draw side walls
 	for (int y = 0; y < MAP_H; y++){
@@ -263,9 +270,9 @@ int	main() {
 		int enemy_crossed_laser = 0;
 		for (int y =0; y < MAP_H; y++) {
 			for (int x =0; x < MAP_W; x++) {
-				if (enemies[y][x] > 0) {
-					if (time_taken - enemies[y][x] > 1) {
-						enemies[y][x] = -time_taken;
+				if (enemy_state[y][x] > 0) {
+					if (time_taken - enemy_state[y][x] > 1) {
+						enemy_state[y][x] = -time_taken;
 					}
 				}
 			}
@@ -274,7 +281,7 @@ int	main() {
 			case ' ':
 				//fire by laser
 				for (int i = 0; i < LASER_RANGE; i++) {
-					t_point dir_pnt = get_next_step();
+					t_point dir_pnt = get_next_point();
 					mvprintw(SCREEN_H/2+dir_pnt.y*i, SCREEN_W/2+dir_pnt.x*i*2, "+");
 					int y = p.pos.y + dir_pnt.y*i;
 					int x1 = p.pos.x + dir_pnt.x*i;
@@ -328,9 +335,14 @@ int	main() {
 		mvprintw(0, 0, "hp=%d, ch=%c, pos [x:%d, y:%d], time lapsed [%ld]", p.health, ch, p.pos.x, p.pos.y, time_taken);
 	}
 	clear();
-	mvprintw(SCREEN_H/2, SCREEN_W/2, "Game over, press");
+	mvprintw(SCREEN_H/2, SCREEN_W/2, "Game over, press q");
 	timeout(100500);
-	getch();
+	while(1) {
+		char ch = getch();
+		if (ch == 'q') {
+			break;
+		}
+	}
 	endwin();
 	return 0;
 }
