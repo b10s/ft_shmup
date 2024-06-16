@@ -673,6 +673,7 @@ int	main() {
 							if (boss.hp == 0) {
 								win();
 							}
+							break;
 						}
 					}
 				}
