@@ -383,6 +383,24 @@ void put_big_enemy(int x, int y, char e) {
 	map[y+1][x+1] = e;
 }
 
+int is_there_enemies() {
+	for (int y = 0; y < MAP_H; y++) {
+		for (int x = 0; x < MAP_W; x++) {
+			if (map[y][x] != 0 && strchr(enemy_list, map[y][x]) != NULL) {
+				return 1;
+			}
+		}
+	}
+	return 0;
+}
+
+void win() {
+	mvprintw(10, 10, "Contgratz I.C. Weiner!");
+	mvprintw(12, 10, "Press any key to finish");
+	timeout(10000);
+	getch();
+}
+
 
 // controls //
 // awds - to rotate
@@ -434,6 +452,13 @@ int	main() {
 	}
 
 	for (; p.health > 0;) {
+		if (is_there_enemies() == 0) {
+			refresh();
+			clear();
+			win();
+			endwin();
+			return 0;
+		}
 		gettimeofday(&end, NULL);
 		time_taken = end.tv_sec - start.tv_sec;
 		p.frame++;
