@@ -22,3 +22,6 @@ typedef struct {
 #define SCREEN_H 50
 #define SCREEN_W 100
 #define LASER_RANGE 10
+
+#define ENEMY_CNT 125
+#define LASER_CNT 125
