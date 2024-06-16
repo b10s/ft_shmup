@@ -17,6 +17,17 @@ typedef struct {
 	int frame;
 } t_player;
 
+typedef struct {
+	char *name;
+	t_point pos;
+	int hp;
+	int guarded;
+	int last_hit;
+	t_direction dir;
+	int dir_changed;
+	int last_move;
+} t_boss;
+
 #define MAP_W 2000
 #define MAP_H 100
 #define SCREEN_H 50

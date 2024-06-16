@@ -56,6 +56,35 @@ char *enemy_list = "EL";
 
 clock_t start;
 t_player p;
+t_boss boss;
+
+t_point get_next_point_boss() {
+	t_point point;
+	int dx, dy;
+	dx = 0;
+	dy = 0;
+	switch (boss.dir) {
+		case NORTH:
+			dx = 0;
+			dy = -1;
+			break;
+		case EAST:
+			dx = 1;
+			dy = 0;
+			break;
+		case SOUTH:
+			dx = 0;
+			dy = 1;
+			break;
+		case WEST:
+			dx = -1;
+			dy = 0;
+			break;
+	}
+	point.x = dx;
+	point.y = dy;
+	return point;
+}
 
 t_point get_next_point() {
 	t_point point;
@@ -83,6 +112,28 @@ t_point get_next_point() {
 	point.x = dx;
 	point.y = dy;
 	return point;
+}
+
+void bounce_boss() {
+	switch (boss.dir) {
+		case NORTH:
+			boss.dir = SOUTH;
+			break;
+		case EAST:
+			boss.dir = WEST;
+			break;
+		case SOUTH:
+			boss.dir = NORTH;
+			break;
+		case WEST:
+			boss.dir = EAST;
+			break;
+	}
+	boss.dir_changed = time_taken;
+	// make one step
+	t_point delta = get_next_point_boss();
+	boss.pos.y += delta.y;
+	boss.pos.x += delta.x;
 }
 
 void bounce_player_out_of_laser() {
@@ -394,6 +445,96 @@ int is_there_enemies() {
 	return 0;
 }
 
+// put boss at the center of the map
+// make sure map size is hardcoded big enough :)
+void init_boss_first_pos() {
+	boss.pos.y = MAP_H/2;
+	boss.pos.x = MAP_W/2 + 100;
+	// draw boss on his position
+}
+
+void put_boss_onto_map() {
+	for (int y = -3; y <= 3; y++) {
+		for (int x = -5; x <= 5; x++) {
+			map[boss.pos.y + y][boss.pos.x + x] = 'B';
+		}
+	}
+}
+
+// boss size is 6x10 approx
+void place_boss() {
+	// we can place boss
+	if (boss.pos.y - 3 > 0 && boss.pos.y + 3 < MAP_H) {
+		// check if there is no walls
+		if (map[boss.pos.y - 3][boss.pos.x] == 'W'
+				||map[boss.pos.y + 3][boss.pos.x] == 'W'
+				|| map[boss.pos.y][boss.pos.x - 5] == 'W'
+				|| map[boss.pos.y][boss.pos.x + 5] == 'W') {
+			bounce_boss();
+		}
+		put_boss_onto_map();
+	} else {
+		bounce_boss();
+	}
+
+	// we can place boss
+	if (boss.pos.x - 5 > 0 && boss.pos.x + 5 < MAP_W) {
+		// check if there is no walls
+		if (map[boss.pos.y - 3][boss.pos.x] == 'W'
+				||map[boss.pos.y + 3][boss.pos.x] == 'W'
+				|| map[boss.pos.y][boss.pos.x - 5] == 'W'
+				|| map[boss.pos.y][boss.pos.x + 5] == 'W') {
+			bounce_boss();
+		}
+		put_boss_onto_map();
+	} else {
+		bounce_boss();
+	}
+}
+
+// boss moves slower: 2 moves per seconds
+// (y+1, x+2) x 2
+// we decide direction randomly and allow to go there for 5-10 seconds also randomly
+void move_boss() {
+	// remove boss from old position
+	for (int y = -3; y <= 3; y++) {
+		for (int x = -5; x <= 5; x++) {
+			map[boss.pos.y + y][boss.pos.x + x] = 0;
+		}
+	}
+	// decide next coordinates based on timing and randomness (x2)
+	if (time_taken - boss.last_move > 1) {
+		boss.last_move = time_taken;
+		// decide if we can try to change direction
+		// if we can choose random direction
+		if ((time_taken - boss.dir_changed) > (rand() % 30 + 10)) {
+			boss.dir_changed = time_taken;
+			switch (rand() % 4) {
+				case 0:
+					boss.dir = NORTH;
+					break;
+				case 1:
+					boss.dir = SOUTH;
+					break;
+				case 2:
+					boss.dir = WEST;
+					break;
+				case 3:
+					boss.dir = EAST;
+					break;
+			}
+		}
+
+		// make one step
+		t_point delta = get_next_point_boss();
+		boss.pos.y += delta.y;
+		boss.pos.x += delta.x;
+	}
+	
+	// after deciding boss next coordinates
+	place_boss();
+}
+
 void win() {
 	mvprintw(10, 10, "Contgratz I.C. Weiner!");
 	mvprintw(12, 10, "Press any key to finish");
@@ -424,6 +565,7 @@ int	main() {
 	p.dir = EAST;
 	p.frame = 0;
 
+	// generate lasers
 	int x, y;
 	for (int i = 0; i < LASER_CNT; i++) {
 		y = rand() % MAP_H;
@@ -438,9 +580,17 @@ int	main() {
 		}
 
 	}
+	// generate small passive enemies
 	for (int i = 0; i < ENEMY_CNT; i++) {
 		map[rand()%MAP_H][rand()%MAP_W] = 'E';
 	}
+
+	// bonus part: generate big boss
+	// boss moves and destroyes everything on his way including other enemies
+	// when boss hit player - it means game over :(
+	boss.name = "Evil";
+	init_boss_first_pos();
+
 
 	// draw side walls
 	for (int y = 0; y < MAP_H; y++){
@@ -460,6 +610,7 @@ int	main() {
 			endwin();
 			return 0;
 		}
+		move_boss();
 		gettimeofday(&end, NULL);
 		time_taken = end.tv_sec - start.tv_sec;
 		p.frame++;
@@ -544,12 +695,9 @@ int	main() {
  * TODO
  * when shooted do blink with red and some ascii art (some word)
  * blinking coursour on other non iterm terms: try other terminal
- * make enemies bigger: 5x5 characters or so
- * make enemy shoot at least one type of enemy
  * make player also bigger (so it will support multiplayer in future easier)?
- * make sure it compiles with all flags
  * show usage help before start and ask to press s
- * make sure when we slide we also can hit the enemy
+ * bug? make sure when we slide we also can hit the enemy
  * make big laser to shoot only one laser from middle
  * when kill laser kill adjustent
  */
