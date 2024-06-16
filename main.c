@@ -421,7 +421,7 @@ void kill_enemy(int en_x, int en_y) {
 	for (int y = en_y - 2; y <= en_y+2; y++) {
 		for (int x = en_x - 2; x <= en_x+2; x++) {
 			if (map[y][x] == en) {
-				map[y][x] = '8';
+				map[y][x] = '.';
 			}
 		}
 	}
@@ -546,6 +546,7 @@ void win() {
 	mvprintw(35, 10, "Ian");
 	timeout(10000);
 	getch();
+	exit(0);
 }
 
 
@@ -594,6 +595,7 @@ int	main() {
 	// boss moves and destroyes everything on his way including other enemies
 	// when boss hit player - it means game over :(
 	boss.name = "Evil";
+	boss.hp = 5;
 	init_boss_first_pos();
 
 
@@ -634,6 +636,7 @@ int	main() {
 		}
 		switch (ch) {
 			case ' ':
+				//plrsh
 				//fire by laser
 				for (int i = 0; i < LASER_RANGE; i++) {
 					t_point delta = get_next_point();
@@ -644,15 +647,23 @@ int	main() {
 					char step2 = map[p.pos.y + delta.y * i][p.pos.x + delta.x*i*2];
 					if (step1 != 0 && strchr(enemy_list, step1) != NULL) {
 						kill_enemy(p.pos.x + delta.x*i, p.pos.y + delta.y*i);
-						//map[p.pos.y + delta.y*i][p.pos.x + delta.x*i] = '8';
 						enemy_killed = 1;
 						break;
 					}
 					if (step2 != 0 && strchr(enemy_list, step2) != NULL) {
 						kill_enemy(p.pos.x +delta.x*i*2, p.pos.y + delta.y*i);
-						//map[p.pos.y + delta.y*i][p.pos.x +delta.x*i*2] = '8';
 						enemy_killed = 1;
 						break;
+					}
+
+					// case for boss
+					if (step1 == 'B' || step2 == 'B') {
+						// check if boss is not heaten before
+						boss.last_hit = time_taken;
+						boss.hp--;
+						if (boss.hp == 0) {
+							win();
+						}
 					}
 				}
 				if (enemy_killed == 1) {
