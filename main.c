@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <curses.h>
 #include <time.h>
+#include <string.h>
 
 #include "./ft_shmup.h"
 
@@ -89,6 +90,7 @@ void blink_red() {
 
 	make_all_black();
   // Define big text (this is a simple example, you can create more complex designs)
+	// https://patorjk.com/software/taag/#p=display&h=2&v=0&f=Basic&t=o%20o%20p%20s
   const char *big_text[] = {
 "",
 " .d88b.       .d88b.      d8888b.     .d8888. ",
@@ -144,8 +146,15 @@ void move_player() {
 		p.pos.y = new_position.y;
 	}
 
-	if (map[p.pos.y][p.pos.x] == 'E'
-			|| map[p.pos.y][p.pos.x - delta.x] == 'E') {
+
+	// E - Enemy
+	// L - Laser
+	char *enemy_list = "EL";
+	// since we do two steps by X, we need to check both
+	char step1 = map[p.pos.y][p.pos.x - delta.x];
+	char step2 = map[p.pos.y][p.pos.x];
+	if ( (step1 != 0 && strchr(enemy_list, step1) != NULL)
+			|| (step2 != 0 && strchr(enemy_list, step2) != NULL) ) {
 		p.health--;
 		blink_red();
 	}
