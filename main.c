@@ -31,7 +31,7 @@ t_point get_next_step() {
 	int dx, dy;
 	dx = 0;
 	dy = 0;
-	switch (p.cur_direction) {
+	switch (p.dir) {
 		case NORTH:
 			dx = 0;
 			dy = -1;
@@ -80,19 +80,19 @@ void blink_blue() {
 void move_player() {
 	t_point delta = get_next_step();
 	t_point new_position;
-	new_position = p.cur_position;
+	new_position = p.pos;
 	new_position.x += delta.x*2;
 	new_position.y += delta.y;
 
 	if (new_position.x < MAP_W - SCREEN_W/2 && new_position.x > SCREEN_W/2) {
-		p.cur_position.x = new_position.x;
+		p.pos.x = new_position.x;
 	}
 	if (new_position.y < MAP_H - SCREEN_H/2 && new_position.y > SCREEN_H/2) {
-		p.cur_position.y = new_position.y;
+		p.pos.y = new_position.y;
 	}
 
-	if (map[p.cur_position.y][p.cur_position.x] == 'E'
-			|| map[p.cur_position.y][p.cur_position.x - delta.x] == 'E') {
+	if (map[p.pos.y][p.pos.x] == 'E'
+			|| map[p.pos.y][p.pos.x - delta.x] == 'E') {
 		p.health--;
 		blink_red();
 	}
@@ -102,25 +102,25 @@ void move_player() {
 // ijlk
 
 void draw_enimy_laser(t_point enemy_pos, int x, int y) {
-	int start_x = p.cur_position.x - SCREEN_W/2;
-	int start_y = p.cur_position.y - SCREEN_H/2;
+	int start_x = p.pos.x - SCREEN_W/2;
+	int start_y = p.pos.y - SCREEN_H/2;
 	// fire by laser
 	for (int i = 1; i < LASER_RANGE; i++) {
 		if (map[start_y + y + i][start_x + x] != 'W' && y + i < SCREEN_H) {
-			if ((p.cur_position.x == enemy_pos.x
-					&& p.cur_position.y == enemy_pos.y + i)
-					|| (p.cur_position.x-1 == enemy_pos.x
-					&& p.cur_position.y == enemy_pos.y + i)) {
+			if ((p.pos.x == enemy_pos.x
+					&& p.pos.y == enemy_pos.y + i)
+					|| (p.pos.x-1 == enemy_pos.x
+					&& p.pos.y == enemy_pos.y + i)) {
 				p.health--;
 				blink_red();
 			}
 			mvprintw(y+i, x, "+");
 		}
 		if (map[start_y + y - i][start_x + x] != 'W') {
-			if ((p.cur_position.x == enemy_pos.x
-					&& p.cur_position.y == enemy_pos.y - i)
-					|| (p.cur_position.x - 1 == enemy_pos.x
-					&& p.cur_position.y == enemy_pos.y - i)) {
+			if ((p.pos.x == enemy_pos.x
+					&& p.pos.y == enemy_pos.y - i)
+					|| (p.pos.x - 1 == enemy_pos.x
+					&& p.pos.y == enemy_pos.y - i)) {
 				p.health--;
 				blink_red();
 			}
@@ -135,8 +135,8 @@ void draw_screen() {
 	// draw current screen
 	// draw player at the center and his direction
 	
-	int start_x = p.cur_position.x - SCREEN_W/2;
-	int start_y = p.cur_position.y - SCREEN_H/2;
+	int start_x = p.pos.x - SCREEN_W/2;
+	int start_y = p.pos.y - SCREEN_H/2;
 	if ( start_x < 0 ) {
 		start_x = 0;
 	}
@@ -180,7 +180,7 @@ void draw_screen() {
 	// draw player
 	mvprintw(SCREEN_H/2, SCREEN_W/2, "o");
 	t_point delta = get_next_step();
-	mvprintw(SCREEN_H/2+delta.y, SCREEN_W/2+delta.x, "%c", "^>v<"[p.cur_direction]);
+	mvprintw(SCREEN_H/2+delta.y, SCREEN_W/2+delta.x, "%c", "^>v<"[p.dir]);
 	
 	// draw borders
 	for (int y = 0; y <= SCREEN_H; y++) {
@@ -195,23 +195,23 @@ void draw_screen() {
 void slide(t_direction direction) {
 	switch (direction) {
 		case NORTH:
-			if (p.cur_position.y - 1 > SCREEN_H/2) {
-				p.cur_position.y--;
+			if (p.pos.y - 1 > SCREEN_H/2) {
+				p.pos.y--;
 			}
 			break;
 		case EAST:
-			if (p.cur_position.x + 1 < MAP_W - SCREEN_W/2) {
-				p.cur_position.x++;
+			if (p.pos.x + 1 < MAP_W - SCREEN_W/2) {
+				p.pos.x++;
 			}
 			break;
 		case SOUTH:
-			if (p.cur_position.y + 1 < MAP_H - SCREEN_H/2) {
-				p.cur_position.y++;
+			if (p.pos.y + 1 < MAP_H - SCREEN_H/2) {
+				p.pos.y++;
 			}
 			break;
 		case WEST:
-			if (p.cur_position.x - 1 > SCREEN_W/2) {
-				p.cur_position.x--;
+			if (p.pos.x - 1 > SCREEN_W/2) {
+				p.pos.x--;
 			}
 			break;
 	}
@@ -228,9 +228,9 @@ int	main() {
 
 	p.health = 3;
 	// type cast is ok?
-	p.cur_position.x = MAP_W/2;
-	p.cur_position.y = MAP_H/2;
-	p.cur_direction = EAST;
+	p.pos.x = MAP_W/2;
+	p.pos.y = MAP_H/2;
+	p.dir = EAST;
 	p.frame = 0;
 
 	// tests
@@ -259,7 +259,7 @@ int	main() {
 		p.frame++;
 		int	ch = getch();
 		clear();
-		printw("hp=%d, ch=%c, pos [x:%d, y:%d], time lapsed [%ld]", p.health, ch, p.cur_position.x, p.cur_position.y, time_taken);
+		printw("hp=%d, ch=%c, pos [x:%d, y:%d], time lapsed [%ld]", p.health, ch, p.pos.x, p.pos.y, time_taken);
 		int enemy_crossed_laser = 0;
 		for (int y =0; y < MAP_H; y++) {
 			for (int x =0; x < MAP_W; x++) {
@@ -276,9 +276,9 @@ int	main() {
 				for (int i = 0; i < LASER_RANGE; i++) {
 					t_point dir_pnt = get_next_step();
 					mvprintw(SCREEN_H/2+dir_pnt.y*i, SCREEN_W/2+dir_pnt.x*i*2, "+");
-					int y = p.cur_position.y + dir_pnt.y*i;
-					int x1 = p.cur_position.x + dir_pnt.x*i;
-					int x2 = p.cur_position.x + dir_pnt.x*i*2;
+					int y = p.pos.y + dir_pnt.y*i;
+					int x1 = p.pos.x + dir_pnt.x*i;
+					int x2 = p.pos.x + dir_pnt.x*i*2;
 					if (map[y][x1] == 'E') {
 						map[y][x1] = '8';
 						enemy_crossed_laser = 1;
@@ -295,16 +295,16 @@ int	main() {
 				}
 				break;
 			case 'a':
-				p.cur_direction = WEST;
+				p.dir = WEST;
 				break;
 			case 'd':
-				p.cur_direction = EAST;
+				p.dir = EAST;
 				break;
 			case 'w':
-				p.cur_direction = NORTH;
+				p.dir = NORTH;
 				break;
 			case 's':
-				p.cur_direction = SOUTH;
+				p.dir = SOUTH;
 				break;
 			case 'i':
 				slide(NORTH);
@@ -325,7 +325,7 @@ int	main() {
 		}
 		move_player();
 		draw_screen();
-		mvprintw(0, 0, "hp=%d, ch=%c, pos [x:%d, y:%d], time lapsed [%ld]", p.health, ch, p.cur_position.x, p.cur_position.y, time_taken);
+		mvprintw(0, 0, "hp=%d, ch=%c, pos [x:%d, y:%d], time lapsed [%ld]", p.health, ch, p.pos.x, p.pos.y, time_taken);
 	}
 	clear();
 	mvprintw(SCREEN_H/2, SCREEN_W/2, "Game over, press");
@@ -343,7 +343,8 @@ int	main() {
  * create second type of enemy (one type will make -1 health, another type will make -2 health, rare enemy - one type can shoot, another can not)
  * make enemy shoot at least one type of enemy
  * make player also bigger (so it will support multiplayer in future easier)?
- * put player as global (replace player with p, cur_pos with pos, cur_direction with dir)
+ * put player as global (replace player with p, cur_pos with pos, dir with dir)
  * make sure it compiles with all flags
  * fix but when next to laser
+ * why laser start to work? (lol!!!)
  */

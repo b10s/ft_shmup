@@ -12,8 +12,8 @@ typedef enum e_direction {
 
 typedef struct {
 	int health;
-	t_point cur_position;
-	t_direction cur_direction;
+	t_point pos;
+	t_direction dir;
 	int frame;
 } t_player;
 
