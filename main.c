@@ -333,10 +333,23 @@ void draw_screen() {
 	char c;
 	for (int y = 0; y < SCREEN_H; y++) {
 		for (int x = 0; x < SCREEN_W; x++) {
-			// draw enemies, walls, and everything
-			mvprintw(y, x, "%c", map[scr_origin.y + y][scr_origin.x + x]);
-
 			c = map[scr_origin.y + y][scr_origin.x + x];
+
+			// draw enemies, walls, and everything
+			// special case for boss
+			if (c == 'B') {
+				// boss is red
+				if (boss.guarded == 1) {
+					attron(COLOR_PAIR(1));
+					mvprintw(y, x, "%c", map[scr_origin.y + y][scr_origin.x + x]);
+					attroff(COLOR_PAIR(1));
+				} else {
+					mvprintw(y, x, "%c", map[scr_origin.y + y][scr_origin.x + x]);
+				}
+			} else {
+				mvprintw(y, x, "%c", map[scr_origin.y + y][scr_origin.x + x]);
+			}
+
 			// enemy type is Laser
 			if (c == 'L') {
 				t_point abs_enemy_pos;
