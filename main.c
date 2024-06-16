@@ -617,6 +617,9 @@ int	main() {
 	}
 
 	for (; p.health > 0;) {
+		if ((time_taken - boss.last_hit) > 3 ) {
+			boss.guarded = 0;
+		}
 		if (is_there_enemies() == 0) {
 			refresh();
 			clear();
@@ -673,6 +676,7 @@ int	main() {
 							if (boss.hp == 0) {
 								win();
 							}
+							boss.guarded = 1;
 							break;
 						}
 					}
