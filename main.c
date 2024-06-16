@@ -8,6 +8,7 @@
 
 #include "./ft_shmup.h"
 
+
 void game_over() {
 	clear();
 	mvprintw(SCREEN_H/2, SCREEN_W/2, "Game over, press q");
@@ -82,6 +83,26 @@ t_point get_next_point() {
 	point.x = dx;
 	point.y = dy;
 	return point;
+}
+
+void bounce_player_out_of_laser() {
+	switch (p.dir) {
+		case NORTH:
+			p.dir = SOUTH;
+			break;
+		case EAST:
+			p.dir = WEST;
+			break;
+		case SOUTH:
+			p.dir = NORTH;
+			break;
+		case WEST:
+			p.dir = EAST;
+			break;
+	}
+	t_point delta = get_next_point();
+	p.pos.x += 3*delta.x;
+	p.pos.y += 3*delta.y;
 }
 
 void draw_big_text(WINDOW *win, const char *text[], int start_y, int start_x, int color_pair) {
@@ -183,8 +204,29 @@ void move_player() {
 			|| (step2 != 0 && strchr(enemy_list, step2) != NULL) ) {
 		p.health--;
 		blink_red();
+		bounce_player_out_of_laser();
 	}
 }
+
+t_point find_laser_center(t_point laser) {
+	t_point res;
+
+	int y = laser.y;
+	while(map[y][laser.x] == 'L') {
+		y--;
+	}
+	y++;
+	int x = laser.x;
+	while(map[y][x] == 'L') {
+		x--;
+	}
+	x++;
+
+	res.x = x + 1;
+	res.y = y + 1;
+	return res;
+}
+
 
 // laser is hotter from right side
 // it is because of solar wind blows from left to the right :)
@@ -199,6 +241,7 @@ void fire_laser(t_point abs_enemy_pos, t_point rel_enemy_pos) {
 					&& p.pos.y == abs_enemy_pos.y + i)) {
 				p.health--;
 				blink_red();
+				bounce_player_out_of_laser();
 			}
 			mvprintw(rel_enemy_pos.y+i, rel_enemy_pos.x, "+");
 		}
@@ -210,6 +253,7 @@ void fire_laser(t_point abs_enemy_pos, t_point rel_enemy_pos) {
 					&& p.pos.y == abs_enemy_pos.y - i)) {
 				p.health--;
 				blink_red();
+				bounce_player_out_of_laser();
 			}
 			mvprintw(rel_enemy_pos.y-i, rel_enemy_pos.x, "+");
 		}
@@ -245,23 +289,31 @@ void draw_screen() {
 				t_point rel_enemy_pos;
 				rel_enemy_pos.x = x;
 				rel_enemy_pos.y = y;
-				int state = enemy_state[abs_enemy_pos.y][abs_enemy_pos.x];
+
+				t_point laser_center = find_laser_center(abs_enemy_pos);
+				t_point laser_upper_edge = laser_center;
+				t_point laser_bottom_edge = laser_center;
+				laser_upper_edge.y--;
+				laser_bottom_edge.y++;
+
+				int state = enemy_state[laser_center.y][laser_center.x];
+
 				if (state == 0) {
 					// decide randomly shoot or not shoot
 					if (rand() % 5 == 1) {
 						// ENEMY SHOOTED
 						// start counting 1 second to keep laser on
 						// start counting 3 seconds to make sure enemy is not shooting (recharging)
-						enemy_state[abs_enemy_pos.y][abs_enemy_pos.x] = time_taken;
+						enemy_state[laser_center.y][laser_center.x] = time_taken;
 					} 
 				// Laser is in switched on state, time is stored in seconds
 				} else if (state > 0) {
-					fire_laser(abs_enemy_pos, rel_enemy_pos);
+					fire_laser(laser_center, rel_enemy_pos);
 				// Laser is in cool down/recharging state, time is stored in seconds (negative)
 				} else if (state < 0) {
 					//recharging, need to wait 1+ seconds
 					if (time_taken - (-1 * state) > 1) {
-						enemy_state[abs_enemy_pos.y][abs_enemy_pos.x] = 0;
+						enemy_state[laser_center.y][laser_center.x] = 0;
 					}
 				}
 			}
@@ -346,7 +398,7 @@ int	main() {
 	struct timeval start, end;
 	gettimeofday(&start, NULL);
 
-	p.health = 3;
+	p.health = 33;
 	// type cast is ok?
 	p.pos.x = MAP_W/2;
 	p.pos.y = MAP_H/2;
