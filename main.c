@@ -20,6 +20,7 @@ void game_over() {
 		}
 	}
 	endwin();
+	exit(0);
 }
 
 __attribute__((destructor))
@@ -256,6 +257,10 @@ void move_player() {
 		p.health--;
 		blink_red();
 		bounce_player_out_of_laser();
+	}
+
+	if (step1 == 'B' || step2 == 'B') {
+		game_over();
 	}
 }
 
