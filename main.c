@@ -434,7 +434,7 @@ void kill_enemy(int en_x, int en_y) {
 	for (int y = en_y - 2; y <= en_y+2; y++) {
 		for (int x = en_x - 2; x <= en_x+2; x++) {
 			if (map[y][x] == en) {
-				map[y][x] = '8';
+				map[y][x] = '.';
 			}
 		}
 	}
