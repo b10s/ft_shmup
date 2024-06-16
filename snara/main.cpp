@@ -3,8 +3,8 @@
 #include <stdexcept>
 #include <vector>
 
-#define MAP_W 100
-#define MAP_H 100
+#define MAP_W 200
+#define MAP_H 50
 #define SCREEN_H 50
 #define SCREEN_W 50
 
@@ -45,9 +45,9 @@ public:
 
 	void	slide(int dy, int dx)
 	{
-		if (0 + SCREEN_W/2 < pos.x + dx && pos.x + dx < MAP_W - SCREEN_W/2)
+		if (1 || (0 < pos.x + dx && pos.x + dx < MAP_W))
 			pos.x += dx;
-		if (0 + SCREEN_H/2 < pos.y + dy && pos.y + dy < MAP_H - SCREEN_H/2)
+		if (0 < pos.y + dy && pos.y + dy < MAP_H)
 			pos.y += dy;
 	}
 	void	rotate(e_direction newdir)
@@ -58,7 +58,7 @@ public:
 	{
 		Point delta = dir_to_delta(dir);
 		slide(delta.y, delta.x);
-		rotate(dir);
+		//rotate(dir);
 	}
 	int	dirx() const
 	{
@@ -70,18 +70,21 @@ public:
 	}
 };
 
-class Entity {
-};
-
 class Gamemap {
 	typedef char value_type;
 	value_type arr[MAP_H][MAP_W];
 public:
+	Gamemap(): arr() {}
+
+	const value_type& at(int y, int x) const
+	{
+		return arr[y % MAP_H][x % MAP_W];
+	}
 	value_type& at(int y, int x)
 	{
 		if (0 <= y && y < MAP_H && 0 <= x && x < MAP_W)
 			return arr[y][x];
-		throw std::out_of_range("out of range");
+		return arr[y % MAP_H][x % MAP_W];
 	}
 };
 
@@ -97,19 +100,23 @@ void	init()
 int	main()
 {
 	init();
-	Player	player(getmaxy(stdscr)/2, getmaxx(stdscr)/2);
-	char	map[MAP_H][MAP_W] = {};
+	Player	player(getmaxy(stdscr)/2, 0);
+	Gamemap map;
 	for (int i = 0; i < 120; i++) {
-		map[rand()%MAP_H][rand()%MAP_W] = 'E';
+		map.at(rand() % MAP_H, rand() % MAP_W & ~1) = 'E';
 	}
 
 	for (; player.hp > 0;) {
 		int	ch = getch();
 		clear();
 		printw("hp=%d ", player.hp);
-		if (ch == ' ')
-			for (int i = 1; i < 20; i++)
-				mvprintw(SCREEN_H/2+player.diry()*i, SCREEN_W/2+player.dirx()*i*2, "+");
+		if (ch == ' ') {
+			for (int i = 1; i < 20; i++) {
+				mvprintw(player.pos.y + player.diry() * i, player.dirx() * i*2, "+");
+				if (map.at(player.pos.y + player.diry() * i, player.pos.x + player.dirx() * i) == 'E')
+					map.at(player.pos.y + player.diry() * i, player.pos.x + player.dirx() * i) = '#';
+			}
+		}
 		else if (ch == 'a')
 			player.move(WEST);
 		else if (ch == 'd')
@@ -123,15 +130,17 @@ int	main()
 		else
 			player.move(player.dir);
 
-		if (map[player.pos.y][player.pos.x])
+		if (map.at(player.pos.y, player.pos.x) == 'E')
 			player.hp -= 1;
+
 		for (int y = 0; y < SCREEN_H; y++) {
 			for (int x = 0; x < SCREEN_W; x++) {
-				mvprintw(y, x*2, "%c", OR(map[y+player.pos.y - SCREEN_H/2][x+player.pos.x - SCREEN_W/2], ' '));
+				mvprintw(y, x*2, "%c", map.at(y, x+player.pos.x));
 			}
 		}
-		mvprintw(SCREEN_H/2, SCREEN_W/2, "o");
-		mvprintw(SCREEN_H/2+player.diry(), SCREEN_W/2+player.dirx(), "%c", "^>v<"[player.dir]);
+		mvprintw(0, 0, "hp=%d x=%d y=%d ", player.hp, player.pos.x, player.pos.y);
+		mvprintw(player.pos.y, 0, "o");
+		mvprintw(player.pos.y + player.diry(), 0 + player.dirx(), "%c", "^>v<"[player.dir]);
 	}
 	endwin();
 }
