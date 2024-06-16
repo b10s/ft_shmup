@@ -352,11 +352,8 @@ int	main() {
  * when shooted do blink with red and some ascii art (some word)
  * blinking coursour on other non iterm terms: try other terminal
  * make enemies bigger: 5x5 characters or so
- * create second type of enemy (one type will make -1 health, another type will make -2 health, rare enemy - one type can shoot, another can not)
  * make enemy shoot at least one type of enemy
  * make player also bigger (so it will support multiplayer in future easier)?
- * put player as global (replace player with p, cur_pos with pos, dir with dir)
  * make sure it compiles with all flags
- * fix but when next to laser
- * why laser start to work? (lol!!!)
+ * show usage help before start and ask to press s
  */
