@@ -421,7 +421,7 @@ void kill_enemy(int en_x, int en_y) {
 	for (int y = en_y - 2; y <= en_y+2; y++) {
 		for (int x = en_x - 2; x <= en_x+2; x++) {
 			if (map[y][x] == en) {
-				map[y][x] = '.';
+				map[y][x] = '8';
 			}
 		}
 	}
@@ -541,12 +541,19 @@ void move_boss() {
 }
 
 void win() {
+	clear();
 	mvprintw(10, 10, "Contgratz I.C. Weiner!");
-	mvprintw(12, 10, "Press any key to finish");
+	mvprintw(12, 10, "Press q key to finish");
 	mvprintw(35, 10, "Ian");
 	timeout(10000);
-	getch();
-	exit(0);
+	refresh();
+	while (1) {
+		char c = getch();
+		if (c == 'q') {
+			endwin();
+			exit(0);
+		}
+	}
 }
 
 
@@ -659,10 +666,13 @@ int	main() {
 					// case for boss
 					if (step1 == 'B' || step2 == 'B') {
 						// check if boss is not heaten before
-						boss.last_hit = time_taken;
-						boss.hp--;
-						if (boss.hp == 0) {
-							win();
+						if (boss.guarded == 0) {
+							boss.last_hit = time_taken;
+							boss.hp--;
+							blink_blue();
+							if (boss.hp == 0) {
+								win();
+							}
 						}
 					}
 				}
