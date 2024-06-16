@@ -4,37 +4,7 @@
 #include <curses.h>
 #include <time.h>
 
-#define MAP_W 2000
-#define MAP_H 100
-#define SCREEN_H 50
-#define SCREEN_W 100
-#define LASER_RANGE 10
-
-
-char	map[MAP_H][MAP_W] = {};
-int	enemies[MAP_H][MAP_W] = {};
-long time_taken;
-
-clock_t start;
-
-typedef struct s_point {
-	int x;
-	int y;
-} t_point;
-
-typedef enum e_direction {
-	NORTH = 0,
-	EAST = 1,
-	SOUTH = 2,
-	WEST = 3,
-} t_direction;
-
-typedef struct {
-	int health;
-	t_point cur_position;
-	t_direction cur_direction;
-	int frame;
-} t_player;
+#include "./ft_shmup.h"
 
 void	init_ncurses() {
 	initscr();
@@ -48,7 +18,15 @@ void	init_ncurses() {
 	init_pair(2, COLOR_BLUE, COLOR_BLUE);
 }
 
-t_point get_next_step(t_player p) {
+char	map[MAP_H][MAP_W] = {};
+int	enemies[MAP_H][MAP_W] = {};
+long time_taken;
+
+clock_t start;
+t_player p;
+
+// TODO: make better name
+t_point get_next_step() {
 	t_point point;
 	int dx, dy;
 	dx = 0;
@@ -99,23 +77,23 @@ void blink_blue() {
 }
 
 
-void move_player(t_player *p) {
-	t_point delta = get_next_step(*p);
+void move_player() {
+	t_point delta = get_next_step();
 	t_point new_position;
-	new_position = p->cur_position;
+	new_position = p.cur_position;
 	new_position.x += delta.x*2;
 	new_position.y += delta.y;
 
 	if (new_position.x < MAP_W - SCREEN_W/2 && new_position.x > SCREEN_W/2) {
-		p->cur_position.x = new_position.x;
+		p.cur_position.x = new_position.x;
 	}
 	if (new_position.y < MAP_H - SCREEN_H/2 && new_position.y > SCREEN_H/2) {
-		p->cur_position.y = new_position.y;
+		p.cur_position.y = new_position.y;
 	}
 
-	if (map[p->cur_position.y][p->cur_position.x] == 'E'
-			|| map[p->cur_position.y][p->cur_position.x - delta.x] == 'E') {
-		p->health--;
+	if (map[p.cur_position.y][p.cur_position.x] == 'E'
+			|| map[p.cur_position.y][p.cur_position.x - delta.x] == 'E') {
+		p.health--;
 		blink_red();
 	}
 }
@@ -123,27 +101,27 @@ void move_player(t_player *p) {
 // a,d,w,s + ' ' 
 // ijlk
 
-void draw_enimy_laser(t_player player, t_point enemy_pos, int x, y) {
-	int start_x = player.cur_position.x - SCREEN_W/2;
-	int start_y = player.cur_position.y - SCREEN_H/2;
+void draw_enimy_laser(t_point enemy_pos, int x, int y) {
+	int start_x = p.cur_position.x - SCREEN_W/2;
+	int start_y = p.cur_position.y - SCREEN_H/2;
 	// fire by laser
 	for (int i = 1; i < LASER_RANGE; i++) {
 		if (map[start_y + y + i][start_x + x] != 'W' && y + i < SCREEN_H) {
-			if ((player.cur_position.x == enemy_pos.x
-					&& player.cur_position.y == enemy_pos.y + i)
-					|| (player.cur_position.x-1 == enemy_pos.x
-					&& player.cur_position.y == enemy_pos.y + i)) {
-				player.health--;
+			if ((p.cur_position.x == enemy_pos.x
+					&& p.cur_position.y == enemy_pos.y + i)
+					|| (p.cur_position.x-1 == enemy_pos.x
+					&& p.cur_position.y == enemy_pos.y + i)) {
+				p.health--;
 				blink_red();
 			}
 			mvprintw(y+i, x, "+");
 		}
 		if (map[start_y + y - i][start_x + x] != 'W') {
-			if ((player.cur_position.x == enemy_pos.x
-					&& player.cur_position.y == enemy_pos.y - i)
-					|| (player.cur_position.x - 1 == enemy_pos.x
-					&& player.cur_position.y == enemy_pos.y - i)) {
-				player.health--;
+			if ((p.cur_position.x == enemy_pos.x
+					&& p.cur_position.y == enemy_pos.y - i)
+					|| (p.cur_position.x - 1 == enemy_pos.x
+					&& p.cur_position.y == enemy_pos.y - i)) {
+				p.health--;
 				blink_red();
 			}
 			mvprintw(y-i, x, "+");
@@ -151,14 +129,14 @@ void draw_enimy_laser(t_player player, t_point enemy_pos, int x, y) {
 	}
 }
 
-void draw_screen(t_player player) {
+void draw_screen() {
 
 	// TODO: slide - move with space: fire and move without changing the direction
 	// draw current screen
 	// draw player at the center and his direction
 	
-	int start_x = player.cur_position.x - SCREEN_W/2;
-	int start_y = player.cur_position.y - SCREEN_H/2;
+	int start_x = p.cur_position.x - SCREEN_W/2;
+	int start_y = p.cur_position.y - SCREEN_H/2;
 	if ( start_x < 0 ) {
 		start_x = 0;
 	}
@@ -188,7 +166,7 @@ void draw_screen(t_player player) {
 						enemies[enemy_pos.y][enemy_pos.x] = time_taken;
 					} 
 				} else if (enemies[enemy_pos.y][enemy_pos.x] > 0) {
-					draw_enimy_laser(player, enemy_pos, x, y);
+					draw_enimy_laser(enemy_pos, x, y);
 				} else if (enemies[enemy_pos.y][enemy_pos.x] < 0) {
 					//recharging, need to wait 2-3 seconds
 					if (time_taken - (-1 * enemies[enemy_pos.y][enemy_pos.x]) > 1) {
@@ -201,8 +179,8 @@ void draw_screen(t_player player) {
 
 	// draw player
 	mvprintw(SCREEN_H/2, SCREEN_W/2, "o");
-	t_point delta = get_next_step(player);
-	mvprintw(SCREEN_H/2+delta.y, SCREEN_W/2+delta.x, "%c", "^>v<"[player.cur_direction]);
+	t_point delta = get_next_step();
+	mvprintw(SCREEN_H/2+delta.y, SCREEN_W/2+delta.x, "%c", "^>v<"[p.cur_direction]);
 	
 	// draw borders
 	for (int y = 0; y <= SCREEN_H; y++) {
@@ -214,26 +192,26 @@ void draw_screen(t_player player) {
 	}
 }
 
-void slide(t_player *player, t_direction direction) {
+void slide(t_direction direction) {
 	switch (direction) {
 		case NORTH:
-			if (player->cur_position.y - 1 > SCREEN_H/2) {
-				player->cur_position.y--;
+			if (p.cur_position.y - 1 > SCREEN_H/2) {
+				p.cur_position.y--;
 			}
 			break;
 		case EAST:
-			if (player->cur_position.x + 1 < MAP_W - SCREEN_W/2) {
-				player->cur_position.x++;
+			if (p.cur_position.x + 1 < MAP_W - SCREEN_W/2) {
+				p.cur_position.x++;
 			}
 			break;
 		case SOUTH:
-			if (player->cur_position.y + 1 < MAP_H - SCREEN_H/2) {
-				player->cur_position.y++;
+			if (p.cur_position.y + 1 < MAP_H - SCREEN_H/2) {
+				p.cur_position.y++;
 			}
 			break;
 		case WEST:
-			if (player->cur_position.x - 1 > SCREEN_W/2) {
-				player->cur_position.x--;
+			if (p.cur_position.x - 1 > SCREEN_W/2) {
+				p.cur_position.x--;
 			}
 			break;
 	}
@@ -241,20 +219,19 @@ void slide(t_player *player, t_direction direction) {
 
 
 int	main() {
-	// Calculate the time taken in seconds
 	init_ncurses();
 
+	// Calculate the time taken in seconds
 	start = clock();
 	struct timeval start, end;
 	gettimeofday(&start, NULL);
 
-	t_player player;
-	player.health = 3;
+	p.health = 3;
 	// type cast is ok?
-	player.cur_position.x = MAP_W/2;
-	player.cur_position.y = MAP_H/2;
-	player.cur_direction = EAST;
-	player.frame = 0;
+	p.cur_position.x = MAP_W/2;
+	p.cur_position.y = MAP_H/2;
+	p.cur_direction = EAST;
+	p.frame = 0;
 
 	// tests
 	///
@@ -276,13 +253,13 @@ int	main() {
 		}
 	}
 
-	for (; player.health > 0;) {
+	for (; p.health > 0;) {
 		gettimeofday(&end, NULL);
 		time_taken = end.tv_sec - start.tv_sec;
-		player.frame++;
+		p.frame++;
 		int	ch = getch();
 		clear();
-		printw("hp=%d, ch=%c, pos [x:%d, y:%d], time lapsed [%ld]", player.health, ch, player.cur_position.x, player.cur_position.y, time_taken);
+		printw("hp=%d, ch=%c, pos [x:%d, y:%d], time lapsed [%ld]", p.health, ch, p.cur_position.x, p.cur_position.y, time_taken);
 		int enemy_crossed_laser = 0;
 		for (int y =0; y < MAP_H; y++) {
 			for (int x =0; x < MAP_W; x++) {
@@ -297,11 +274,11 @@ int	main() {
 			case ' ':
 				//fire by laser
 				for (int i = 0; i < LASER_RANGE; i++) {
-					t_point dir_pnt = get_next_step(player);
+					t_point dir_pnt = get_next_step();
 					mvprintw(SCREEN_H/2+dir_pnt.y*i, SCREEN_W/2+dir_pnt.x*i*2, "+");
-					int y = player.cur_position.y + dir_pnt.y*i;
-					int x1 = player.cur_position.x + dir_pnt.x*i;
-					int x2 = player.cur_position.x + dir_pnt.x*i*2;
+					int y = p.cur_position.y + dir_pnt.y*i;
+					int x1 = p.cur_position.x + dir_pnt.x*i;
+					int x2 = p.cur_position.x + dir_pnt.x*i*2;
 					if (map[y][x1] == 'E') {
 						map[y][x1] = '8';
 						enemy_crossed_laser = 1;
@@ -318,37 +295,37 @@ int	main() {
 				}
 				break;
 			case 'a':
-				player.cur_direction = WEST;
+				p.cur_direction = WEST;
 				break;
 			case 'd':
-				player.cur_direction = EAST;
+				p.cur_direction = EAST;
 				break;
 			case 'w':
-				player.cur_direction = NORTH;
+				p.cur_direction = NORTH;
 				break;
 			case 's':
-				player.cur_direction = SOUTH;
+				p.cur_direction = SOUTH;
 				break;
 			case 'i':
-				slide(&player, NORTH);
+				slide(NORTH);
 				break;
 			case 'k':
-				slide(&player, SOUTH);
+				slide(SOUTH);
 				break;
 			case 'j':
-				slide(&player, WEST);
+				slide(WEST);
 				break;
 			case 'l':
-				slide(&player, EAST);
+				slide(EAST);
 				break;
 			case 'q':
 				//exit game
 				endwin();
 				return 0;
 		}
-		move_player(&player);
-		draw_screen(player);
-		mvprintw(0, 0, "hp=%d, ch=%c, pos [x:%d, y:%d], time lapsed [%ld]", player.health, ch, player.cur_position.x, player.cur_position.y, time_taken);
+		move_player();
+		draw_screen();
+		mvprintw(0, 0, "hp=%d, ch=%c, pos [x:%d, y:%d], time lapsed [%ld]", p.health, ch, p.cur_position.x, p.cur_position.y, time_taken);
 	}
 	clear();
 	mvprintw(SCREEN_H/2, SCREEN_W/2, "Game over, press");
@@ -366,4 +343,7 @@ int	main() {
  * create second type of enemy (one type will make -1 health, another type will make -2 health, rare enemy - one type can shoot, another can not)
  * make enemy shoot at least one type of enemy
  * make player also bigger (so it will support multiplayer in future easier)?
+ * put player as global (replace player with p, cur_pos with pos, cur_direction with dir)
+ * make sure it compiles with all flags
+ * fix but when next to laser
  */
