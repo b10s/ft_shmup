@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <stdlib.h>
 #include <sys/time.h>
 #include <unistd.h>
@@ -19,6 +20,14 @@ void game_over() {
 	}
 	endwin();
 }
+
+__attribute__((destructor))
+void	destructor(void) {
+	char	s[42];
+	snprintf(s, sizeof(s), "leaks -q %d", getpid());
+	system(s);
+}
+
 void	init_ncurses() {
 	initscr();
 	noecho();
