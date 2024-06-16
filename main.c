@@ -397,6 +397,7 @@ int is_there_enemies() {
 void win() {
 	mvprintw(10, 10, "Contgratz I.C. Weiner!");
 	mvprintw(12, 10, "Press any key to finish");
+	mvprintw(35, 10, "Ian");
 	timeout(10000);
 	getch();
 }
