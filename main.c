@@ -28,6 +28,10 @@ char	map[MAP_H][MAP_W] = {};
 int	enemy_state[MAP_H][MAP_W] = {};
 long time_taken;
 
+// E - Enemy
+// L - Laser
+char *enemy_list = "EL";
+
 clock_t start;
 t_player p;
 
@@ -147,9 +151,6 @@ void move_player() {
 	}
 
 
-	// E - Enemy
-	// L - Laser
-	char *enemy_list = "EL";
 	// since we do two steps by X, we need to check both
 	char step1 = map[p.pos.y][p.pos.x - delta.x];
 	char step2 = map[p.pos.y][p.pos.x];
@@ -330,7 +331,7 @@ int	main() {
 		int	ch = getch();
 		clear();
 		printw("hp=%d, ch=%c, pos [x:%d, y:%d], time lapsed [%ld]", p.health, ch, p.pos.x, p.pos.y, time_taken);
-		int enemy_crossed_laser = 0;
+		int enemy_killed = 0;
 		for (int y =0; y < MAP_H; y++) {
 			for (int x =0; x < MAP_W; x++) {
 				if (enemy_state[y][x] > 0) {
@@ -344,23 +345,24 @@ int	main() {
 			case ' ':
 				//fire by laser
 				for (int i = 0; i < LASER_RANGE; i++) {
-					t_point dir_pnt = get_next_point();
-					mvprintw(SCREEN_H/2+dir_pnt.y*i, SCREEN_W/2+dir_pnt.x*i*2, "+");
-					int y = p.pos.y + dir_pnt.y*i;
-					int x1 = p.pos.x + dir_pnt.x*i;
-					int x2 = p.pos.x + dir_pnt.x*i*2;
-					if (map[y][x1] == 'E') {
-						map[y][x1] = '8';
-						enemy_crossed_laser = 1;
+					t_point delta = get_next_point();
+					mvprintw(SCREEN_H/2+delta.y*i, SCREEN_W/2+delta.x*i*2, "+");
+
+					// since we do two steps by X, we need to check both
+					char step1 = map[p.pos.y + delta.y * i][p.pos.x + delta.x*i];
+					char step2 = map[p.pos.y + delta.y * i][p.pos.x + delta.x*i*2];
+					if (step1 != 0 && strchr(enemy_list, step1) != NULL) {
+						map[p.pos.y + delta.y*i][p.pos.x + delta.x*i] = '8';
+						enemy_killed = 1;
 						break;
 					}
-					if (map[y][x2] == 'E') {
-						map[y][x2] = '8';
-						enemy_crossed_laser = 1;
+					if (step2 != 0 && strchr(enemy_list, step2) != NULL) {
+						map[p.pos.y + delta.y*i][p.pos.x +delta.x*i*2] = '8';
+						enemy_killed = 1;
 						break;
 					}
 				}
-				if (enemy_crossed_laser == 1) {
+				if (enemy_killed == 1) {
 					blink_blue();
 				}
 				break;
