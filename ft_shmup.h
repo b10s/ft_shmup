@@ -36,3 +36,4 @@ typedef struct {
 
 #define ENEMY_CNT 125
 #define LASER_CNT 125
+#define DEFAULT_HP 32

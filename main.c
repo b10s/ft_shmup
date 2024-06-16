@@ -11,7 +11,7 @@
 
 void game_over() {
 	clear();
-	mvprintw(SCREEN_H/2, SCREEN_W/2, "Game over, press q");
+	mvprintw(SCREEN_H/2, SCREEN_W/2, "Game over, press q to quit");
 	timeout(100500);
 	while(1) {
 		char ch = getch();
@@ -208,7 +208,7 @@ void blink_red() {
 		return;
 	}
 	mvprintw(10, 10, "You have [%d] health points.", p.health);
-	mvprintw(12, 10, "Press C to continue or Q to panic.");
+	mvprintw(12, 10, "Press C to continue or Q to quit.");
 	refresh();
 	while(1) {
 		char ch = getch();
@@ -584,7 +584,7 @@ int	main() {
 	struct timeval start, end;
 	gettimeofday(&start, NULL);
 
-	p.health = 33;
+	p.health = DEFAULT_HP;
 	// type cast is ok?
 	p.pos.x = MAP_W/2;
 	p.pos.y = MAP_H/2;
@@ -646,7 +646,7 @@ int	main() {
 		p.frame++;
 		int	ch = getch();
 		clear();
-		printw("hp=%d, ch=%c, pos [x:%d, y:%d], time lapsed [%ld]", p.health, ch, p.pos.x, p.pos.y, time_taken);
+		printw("hp=%d, ch=%c, pos [x:%d, y:%d], time elapsed [%ld]", p.health, ch, p.pos.x, p.pos.y, time_taken);
 		int enemy_killed = 0;
 		for (int y =0; y < MAP_H; y++) {
 			for (int x =0; x < MAP_W; x++) {
@@ -729,7 +729,7 @@ int	main() {
 		}
 		move_player();
 		draw_screen();
-		mvprintw(0, 0, "hp=%d, ch=%c, pos [x:%d, y:%d], time lapsed [%ld]", p.health, ch, p.pos.x, p.pos.y, time_taken);
+		mvprintw(0, 0, "hp=%d, ch=%c, pos [x:%d, y:%d], time elapsed [%ld]", p.health, ch, p.pos.x, p.pos.y, time_taken);
 	}
 	game_over();
 	return 0;
