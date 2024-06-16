@@ -13,9 +13,14 @@ void	init_ncurses() {
 	cbreak();
 	timeout(42);
 	start_color();
+  // Define color pairs
 	// color of text, color of background
-	init_pair(1, COLOR_RED, COLOR_RED);
-	init_pair(2, COLOR_BLUE, COLOR_BLUE);
+  init_pair(1, COLOR_RED, COLOR_BLACK);
+  init_pair(2, COLOR_GREEN, COLOR_BLACK);
+  init_pair(3, COLOR_BLUE, COLOR_BLACK);
+  init_pair(4, COLOR_RED, COLOR_RED);
+  init_pair(5, COLOR_BLUE, COLOR_BLUE);
+  init_pair(6, COLOR_BLACK, COLOR_BLACK);
 }
 
 char	map[MAP_H][MAP_W] = {};
@@ -53,22 +58,71 @@ t_point get_next_point() {
 	return point;
 }
 
+void draw_big_text(WINDOW *win, const char *text[], int start_y, int start_x, int color_pair) {
+    for (int i = 0; text[i] != NULL; i++) {
+        mvwprintw(win, start_y + i, start_x, "%s", text[i]);
+        wattron(win, COLOR_PAIR(color_pair));
+        mvwprintw(win, start_y + i, start_x, "%s", text[i]);
+        wattroff(win, COLOR_PAIR(color_pair));
+    }
+}
+
+void make_all_black() {
+	// Set all positions to red
+	for (int y = 0; y < SCREEN_H; y++) {
+	    for (int x = 0; x < SCREEN_W; x++) {
+	        mvaddch(y, x, ' ' | COLOR_PAIR(6));
+	    }
+	}
+	refresh();
+}
+
 void blink_red() {
 	// Set all positions to red
 	for (int y = 0; y < SCREEN_H; y++) {
 	    for (int x = 0; x < SCREEN_W; x++) {
-	        mvaddch(y, x, ' ' | COLOR_PAIR(1));
+	        mvaddch(y, x, ' ' | COLOR_PAIR(4));
 	    }
 	}
 	refresh();
-	usleep(200000);
+	usleep(100000);
+
+	make_all_black();
+  // Define big text (this is a simple example, you can create more complex designs)
+  const char *big_text[] = {
+"",
+" .d88b.       .d88b.      d8888b.     .d8888. ",
+".8P  Y8.     .8P  Y8.     88  `8D     88'  YP ",
+"88    88     88    88     88oodD'     `8bo.   ",
+"88    88     88    88     88~~~         `Y8b. ",
+"`8b  d8'     `8b  d8'     88          db   8D ",
+" `Y88P'       `Y88P'      88          `8888Y' ",
+"",
+      NULL
+  };
+  // Draw the big text with color
+  draw_big_text(stdscr, big_text, SCREEN_H/2, SCREEN_W/2, 1);  // Using color pair 1 (red)
+
+	mvprintw(10, 10, "You have [%d] health points.", p.health);
+	mvprintw(12, 10, "Press C to continue or P to panic.");
+	refresh();
+	while(1) {
+		char ch = getch();
+		if (ch == 'c' || ch == 'C') {
+			break;
+		}
+		if (ch == 'p' || ch == 'P') {
+			endwin();
+			exit(1);
+		}
+	}
 }
 
 void blink_blue() {
 	// Set all positions to red
 	for (int y = 0; y < SCREEN_H; y++) {
 	    for (int x = 0; x < SCREEN_W; x++) {
-	        mvaddch(y, x, ' ' | COLOR_PAIR(2));
+	        mvaddch(y, x, ' ' | COLOR_PAIR(5));
 	    }
 	}
 	refresh();
